@@ -1,19 +1,3 @@
-/*
-vNES
-Copyright © 2006-2013 Open Emulation Project
-
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with
-this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 
 public class Mapper078 extends MapperDefault {
 
@@ -23,7 +7,7 @@ public class Mapper078 extends MapperDefault {
 
     }
 
-    public void write(int address, short value) {
+        public void write(int address, short value) {
 
         int prg_bank = value & 0x0F;
         int chr_bank = (value & 0xF0) >> 4;
@@ -37,9 +21,9 @@ public class Mapper078 extends MapperDefault {
 
             if ((address & 0xFE00) != 0xFE00) {
                 if ((value & 0x08) != 0) {
-                    nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING2);
+                  nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING2);
                 } else {
-                    nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING);
+                  nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING);
                 }
             }
         }
@@ -64,4 +48,5 @@ public class Mapper078 extends MapperDefault {
         nes.getCpu().requestIrq(CPU.IRQ_RESET);
 
     }
+
 }

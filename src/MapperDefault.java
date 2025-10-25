@@ -1,19 +1,3 @@
-/*
-vNES
-Copyright © 2006-2013 Open Emulation Project
-
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with
-this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 
 public class MapperDefault implements MemoryMapper {
 
@@ -33,6 +17,7 @@ public class MapperDefault implements MemoryMapper {
     public int mouseX;
     public int mouseY;
     int tmp;
+    long crc;
 
     public void init(NES nes) {
 
@@ -43,7 +28,7 @@ public class MapperDefault implements MemoryMapper {
         this.rom = nes.getRom();
         this.cpu = nes.getCpu();
         this.ppu = nes.getPpu();
-
+        
         cpuMemSize = cpuMem.getMemSize();
         joypadLastWrite = -1;
 
@@ -118,9 +103,9 @@ public class MapperDefault implements MemoryMapper {
             if (address >= 0x6000 && address < 0x8000) {
 
                 // Write to SaveRAM. Store in file:
-//                if (rom != null) {
-//                    rom.writeBatteryRam(address, value);
-//                }
+                if (rom != null) {
+                    rom.writeBatteryRam(address, value);
+                }
 
             }
 
@@ -155,6 +140,32 @@ public class MapperDefault implements MemoryMapper {
     }
 
     public short load(int address) {
+
+        // Game Genie codes active?
+        if (gameGenieActive) {
+            if (nes.gameGenie.addressMatch[address]) {
+
+                tmp = nes.gameGenie.getCodeIndex(address);
+
+                // Check the code type:
+                if (nes.gameGenie.getCodeType(tmp) == GameGenie.TYPE_6CHAR) {
+
+                    // Return the code value:
+                    return (short) nes.gameGenie.getCodeValue(tmp);
+
+                } else {
+
+                    // Check whether the actual value equals the compare value:
+                    if (cpuMemArray[address] == nes.gameGenie.getCodeCompare(tmp)) {
+
+                        // The values match, so use the supplied game genie value:
+                        return (short) nes.gameGenie.getCodeValue(tmp);
+
+                    }
+
+                }
+            }
+        }
 
         // Wrap around:
         address &= 0xFFFF;
@@ -696,6 +707,9 @@ public class MapperDefault implements MemoryMapper {
 
     public int syncH(int scanline) {
         return 0;
+      }
+
+    public void setCRC(long crc) {
     }
 
     public void setMouseState(boolean pressed, int x, int y) {

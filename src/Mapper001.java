@@ -1,370 +1,357 @@
-/*
-vNES
-Copyright © 2006-2013 Open Emulation Project
+public class Mapper001 extends MapperDefault{
 
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
+	// Register flags:
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+	// Register 0:
+	int mirroring;
+	int oneScreenMirroring;
+	int prgSwitchingArea = 1;
+	int prgSwitchingSize = 1;
+	int vromSwitchingSize;
 
-You should have received a copy of the GNU General Public License along with
-this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+	// Register 1:
+	int romSelectionReg0;
 
-public class Mapper001 extends MapperDefault {
+	// Register 2:
+	int romSelectionReg1;
 
-    // Register flags:
+	// Register 3:
+	int romBankSelect;
 
-    // Register 0:
-    int mirroring;
-    int oneScreenMirroring;
-    int prgSwitchingArea = 1;
-    int prgSwitchingSize = 1;
-    int vromSwitchingSize;
+	// 5-bit buffer:
+	int regBuffer;
+	int regBufferCounter;
 
-    // Register 1:
-    int romSelectionReg0;
+	public void init(NES nes){
 
-    // Register 2:
-    int romSelectionReg1;
+		super.init(nes);
 
-    // Register 3:
-    int romBankSelect;
+	}
 
-    // 5-bit buffer:
-    int regBuffer;
-    int regBufferCounter;
+	public void mapperInternalStateLoad(ByteBuffer buf){
 
-    public void init(NES nes) {
+		// Check version:
+		if(buf.readByte()==1){
 
-        super.init(nes);
+			// Reg 0:
+			mirroring		 = buf.readInt();
+			oneScreenMirroring	 = buf.readInt();
+			prgSwitchingArea	 = buf.readInt();
+			prgSwitchingSize	 = buf.readInt();
+			vromSwitchingSize	 = buf.readInt();
 
-    }
+			// Reg 1:
+			romSelectionReg0	 = buf.readInt();
 
-    public void mapperInternalStateLoad(ByteBuffer buf) {
+			// Reg 2:
+			romSelectionReg1	 = buf.readInt();
 
-        // Check version:
-        if (buf.readByte() == 1) {
+			// Reg 3:
+			romBankSelect		 = buf.readInt();
 
-            // Reg 0:
-            mirroring = buf.readInt();
-            oneScreenMirroring = buf.readInt();
-            prgSwitchingArea = buf.readInt();
-            prgSwitchingSize = buf.readInt();
-            vromSwitchingSize = buf.readInt();
+			// 5-bit buffer:
+			regBuffer		 = buf.readInt();
+			regBufferCounter	 = buf.readInt();
 
-            // Reg 1:
-            romSelectionReg0 = buf.readInt();
+		}
 
-            // Reg 2:
-            romSelectionReg1 = buf.readInt();
+	}
 
-            // Reg 3:
-            romBankSelect = buf.readInt();
+	public void mapperInternalStateSave(ByteBuffer buf){
 
-            // 5-bit buffer:
-            regBuffer = buf.readInt();
-            regBufferCounter = buf.readInt();
+		// Version:
+		buf.putByte((short)1);
 
-        }
+		// Reg 0:
+		buf.putInt(mirroring			);
+		buf.putInt(oneScreenMirroring	);
+		buf.putInt(prgSwitchingArea		);
+		buf.putInt(prgSwitchingSize		);
+		buf.putInt(vromSwitchingSize	);
 
-    }
+		// Reg 1:
+		buf.putInt(romSelectionReg0		);
 
-    public void mapperInternalStateSave(ByteBuffer buf) {
+		// Reg 2:
+		buf.putInt(romSelectionReg1		);
 
-        // Version:
-        buf.putByte((short) 1);
+		// Reg 3:
+		buf.putInt(romBankSelect		);
 
-        // Reg 0:
-        buf.putInt(mirroring);
-        buf.putInt(oneScreenMirroring);
-        buf.putInt(prgSwitchingArea);
-        buf.putInt(prgSwitchingSize);
-        buf.putInt(vromSwitchingSize);
+		// 5-bit buffer:
+		buf.putInt(regBuffer			);
+		buf.putInt(regBufferCounter		);
 
-        // Reg 1:
-        buf.putInt(romSelectionReg0);
+	}
 
-        // Reg 2:
-        buf.putInt(romSelectionReg1);
+	public void write(int address, short value){
 
-        // Reg 3:
-        buf.putInt(romBankSelect);
+		// Writes to addresses other than MMC registers are handled by NoMapper.
+		if(address < 0x8000){
+			super.write(address,value);
+			return;
+		}
 
-        // 5-bit buffer:
-        buf.putInt(regBuffer);
-        buf.putInt(regBufferCounter);
+		////System.out.println("MMC Write. Reg="+(getRegNumber(address))+" Value="+value);
 
-    }
+		// See what should be done with the written value:
+		if((value&128)!=0){
 
-    public void write(int address, short value) {
+			// Reset buffering:
+			regBufferCounter = 0;
+			regBuffer = 0;
 
-        // Writes to addresses other than MMC registers are handled by NoMapper.
-        if (address < 0x8000) {
-            super.write(address, value);
-            return;
-        }
+			// Reset register:
+			if(getRegNumber(address) == 0){
 
-        ////System.out.println("MMC Write. Reg="+(getRegNumber(address))+" Value="+value);
+				prgSwitchingArea = 1;
+				prgSwitchingSize = 1;
 
-        // See what should be done with the written value:
-        if ((value & 128) != 0) {
+			}
 
-            // Reset buffering:
-            regBufferCounter = 0;
-            regBuffer = 0;
+		}else{
 
-            // Reset register:
-            if (getRegNumber(address) == 0) {
+			// Continue buffering:
+			//regBuffer = (regBuffer & (0xFF-(1<<regBufferCounter))) | ((value & (1<<regBufferCounter))<<regBufferCounter);
+			regBuffer = (regBuffer & (0xFF-(1<<regBufferCounter))) | ((value&1)<<regBufferCounter);
+			regBufferCounter++;
+			if(regBufferCounter == 5){
 
-                prgSwitchingArea = 1;
-                prgSwitchingSize = 1;
+				// Use the buffered value:
+				setReg(getRegNumber(address),regBuffer);
 
-            }
+				// Reset buffer:
+				regBuffer = 0;
+				regBufferCounter = 0;
 
-        } else {
+			}
 
-            // Continue buffering:
-            //regBuffer = (regBuffer & (0xFF-(1<<regBufferCounter))) | ((value & (1<<regBufferCounter))<<regBufferCounter);
-            regBuffer = (regBuffer & (0xFF - (1 << regBufferCounter))) | ((value & 1) << regBufferCounter);
-            regBufferCounter++;
-            if (regBufferCounter == 5) {
+		}
 
-                // Use the buffered value:
-                setReg(getRegNumber(address), regBuffer);
+	}
 
-                // Reset buffer:
-                regBuffer = 0;
-                regBufferCounter = 0;
+	private void setReg(int reg, int value){
 
-            }
+		int tmp,tmp2;
 
-        }
+		if(reg == 0){
 
-    }
+			// Mirroring:
+			tmp = value&3;
+			if(tmp != mirroring){
+				// Set mirroring:
+				mirroring = tmp;
+				if((mirroring & 2)==0){
+					// SingleScreen mirroring overrides the other setting:
+					////System.out.println("MMC1: Setting Singlescreen Mirroring.");
+					nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING);
+				}else{
+					// Not overridden by SingleScreen mirroring.
+					////System.out.println("MMC1: Setting Normal Mirroring. value="+mirroring);
+					nes.getPpu().setMirroring((mirroring&1)!=0?ROM.HORIZONTAL_MIRRORING:ROM.VERTICAL_MIRRORING);
+				}
+			}
 
-    private void setReg(int reg, int value) {
+			// PRG Switching Area;
+			prgSwitchingArea = (value>>2)&1;
 
-        int tmp, tmp2;
+			// PRG Switching Size:
+			prgSwitchingSize = (value>>3)&1;
 
-        if (reg == 0) {
+			// VROM Switching Size:
+			vromSwitchingSize = (value>>4)&1;
 
-            // Mirroring:
-            tmp = value & 3;
-            if (tmp != mirroring) {
-                // Set mirroring:
-                mirroring = tmp;
-                if ((mirroring & 2) == 0) {
-                    // SingleScreen mirroring overrides the other setting:
-                    ////System.out.println("MMC1: Setting Singlescreen Mirroring.");
-                    nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING);
-                } else {
-                    // Not overridden by SingleScreen mirroring.
-                    ////System.out.println("MMC1: Setting Normal Mirroring. value="+mirroring);
-                    nes.getPpu().setMirroring((mirroring & 1) != 0 ? ROM.HORIZONTAL_MIRRORING : ROM.VERTICAL_MIRRORING);
-                }
-            }
+		}else if(reg == 1){
 
-            // PRG Switching Area;
-            prgSwitchingArea = (value >> 2) & 1;
+			// ROM selection:
+			romSelectionReg0 = (value>>4)&1;
 
-            // PRG Switching Size:
-            prgSwitchingSize = (value >> 3) & 1;
+			// Check whether the cart has VROM:
+			if(nes.getRom().getVromBankCount() > 0){
 
-            // VROM Switching Size:
-            vromSwitchingSize = (value >> 4) & 1;
+				// Select VROM bank at 0x0000:
+				if(vromSwitchingSize == 0){
 
-        } else if (reg == 1) {
+					// Swap 8kB VROM:
+					////System.out.println("Swapping 8k VROM, bank="+(value&0xF)+" romSelReg="+romSelectionReg0);
+					if(romSelectionReg0==0){
+						load8kVromBank((value&0xF),0x0000);
+					}else{
+						load8kVromBank(nes.getRom().getVromBankCount()/2+(value&0xF),0x0000);
+					}
 
-            // ROM selection:
-            romSelectionReg0 = (value >> 4) & 1;
+				}else{
 
-            // Check whether the cart has VROM:
-            if (nes.getRom().getVromBankCount() > 0) {
+					// Swap 4kB VROM:
+					////System.out.println("ROMSELREG0 = "+romSelectionReg0);
+					////System.out.println("Swapping 4k VROM at 0x0000, bank="+(value&0xF));
 
-                // Select VROM bank at 0x0000:
-                if (vromSwitchingSize == 0) {
+					if(romSelectionReg0 == 0){
+						loadVromBank((value&0xF),0x0000);
+					}else{
+						loadVromBank(nes.getRom().getVromBankCount()/2+(value&0xF),0x0000);
+					}
 
-                    // Swap 8kB VROM:
-                    ////System.out.println("Swapping 8k VROM, bank="+(value&0xF)+" romSelReg="+romSelectionReg0);
-                    if (romSelectionReg0 == 0) {
-                        load8kVromBank((value & 0xF), 0x0000);
-                    } else {
-                        load8kVromBank(nes.getRom().getVromBankCount() / 2 + (value & 0xF), 0x0000);
-                    }
+				}
 
-                } else {
+			}
 
-                    // Swap 4kB VROM:
-                    ////System.out.println("ROMSELREG0 = "+romSelectionReg0);
-                    ////System.out.println("Swapping 4k VROM at 0x0000, bank="+(value&0xF));
+		}else if(reg == 2){
 
-                    if (romSelectionReg0 == 0) {
-                        loadVromBank((value & 0xF), 0x0000);
-                    } else {
-                        loadVromBank(nes.getRom().getVromBankCount() / 2 + (value & 0xF), 0x0000);
-                    }
+			// ROM selection:
+			romSelectionReg1 = (value>>4)&1;
 
-                }
+			// Check whether the cart has VROM:
+			if(nes.getRom().getVromBankCount() > 0){
 
-            }
+				// Select VROM bank at 0x1000:
+				if(vromSwitchingSize == 1){
 
-        } else if (reg == 2) {
+					// Swap 4kB of VROM:
+					////System.out.println("ROMSELREG1 = "+romSelectionReg1);
+					////System.out.println("Swapping 4k VROM at 0x1000, bank="+(value&0xF));
+					if(romSelectionReg1 == 0){
+						loadVromBank((value&0xF),0x1000);
+					}else{
+						loadVromBank(nes.getRom().getVromBankCount()/2+(value&0xF),0x1000);
+					}
 
-            // ROM selection:
-            romSelectionReg1 = (value >> 4) & 1;
+				}
 
-            // Check whether the cart has VROM:
-            if (nes.getRom().getVromBankCount() > 0) {
+			}
 
-                // Select VROM bank at 0x1000:
-                if (vromSwitchingSize == 1) {
+		}else{
 
-                    // Swap 4kB of VROM:
-                    ////System.out.println("ROMSELREG1 = "+romSelectionReg1);
-                    ////System.out.println("Swapping 4k VROM at 0x1000, bank="+(value&0xF));
-                    if (romSelectionReg1 == 0) {
-                        loadVromBank((value & 0xF), 0x1000);
-                    } else {
-                        loadVromBank(nes.getRom().getVromBankCount() / 2 + (value & 0xF), 0x1000);
-                    }
+			// Select ROM bank:
+			// -------------------------
+			tmp = value & 0xF;
+			int bank;
+			int baseBank = 0;
+			int bankCount = nes.getRom().getRomBankCount();
 
-                }
+			if(bankCount >= 32){
 
-            }
+				// 1024 kB cart
+				if(vromSwitchingSize == 0){
+					if(romSelectionReg0 == 1){
+						baseBank = 16;
+					}
+				}else{
+					baseBank = (romSelectionReg0 | (romSelectionReg1<<1))<<3;
+				}
 
-        } else {
+			}else if(bankCount >= 16){
 
-            // Select ROM bank:
-            // -------------------------
-            tmp = value & 0xF;
-            int bank;
-            int baseBank = 0;
-            int bankCount = nes.getRom().getRomBankCount();
+				// 512 kB cart
+				if(romSelectionReg0 == 1){
+					baseBank = 8;
+				}
 
-            if (bankCount >= 32) {
+			}
 
-                // 1024 kB cart
-                if (vromSwitchingSize == 0) {
-                    if (romSelectionReg0 == 1) {
-                        baseBank = 16;
-                    }
-                } else {
-                    baseBank = (romSelectionReg0 | (romSelectionReg1 << 1)) << 3;
-                }
+			if(prgSwitchingSize == 0){
 
-            } else if (bankCount >= 16) {
+				// 32kB
+				bank = baseBank+(value&0xF);
+				load32kRomBank(bank,0x8000);
 
-                // 512 kB cart
-                if (romSelectionReg0 == 1) {
-                    baseBank = 8;
-                }
+			}else{
 
-            }
+				// 16kB
+				bank = baseBank*2+(value&0xF);
+				if(prgSwitchingArea == 0){
+					loadRomBank(bank,0xC000);
+				}else{
+					loadRomBank(bank,0x8000);
+				}
 
-            if (prgSwitchingSize == 0) {
+			}
 
-                // 32kB
-                bank = baseBank + (value & 0xF);
-                load32kRomBank(bank, 0x8000);
+			// -------------------------
 
-            } else {
+		}
 
-                // 16kB
-                bank = baseBank * 2 + (value & 0xF);
-                if (prgSwitchingArea == 0) {
-                    loadRomBank(bank, 0xC000);
-                } else {
-                    loadRomBank(bank, 0x8000);
-                }
+	}
 
-            }
+	// Returns the register number from the address written to:
+	private int getRegNumber(int address){
 
-        // -------------------------
+		if(address>=0x8000 && address<=0x9FFF){
+			return 0;
+		}else if(address>=0xA000 && address<=0xBFFF){
+			return 1;
+		}else if(address>=0xC000 && address<=0xDFFF){
+			return 2;
+		}else{
+			return 3;
+		}
 
-        }
+	}
 
-    }
+	public void loadROM(ROM rom){
 
-    // Returns the register number from the address written to:
-    private int getRegNumber(int address) {
+		//System.out.println("Loading ROM.");
 
-        if (address >= 0x8000 && address <= 0x9FFF) {
-            return 0;
-        } else if (address >= 0xA000 && address <= 0xBFFF) {
-            return 1;
-        } else if (address >= 0xC000 && address <= 0xDFFF) {
-            return 2;
-        } else {
-            return 3;
-        }
+		if(!rom.isValid()){
+			//System.out.println("MMC1: Invalid ROM! Unable to load.");
+			return;
+		}
 
-    }
+		// Load PRG-ROM:
+		loadRomBank(0,0x8000);				//   First ROM bank..
+		loadRomBank(rom.getRomBankCount()-1,0xC000); 	// ..and last ROM bank.
 
-    public void loadROM(ROM rom) {
+		// Load CHR-ROM:
+		loadCHRROM();
 
-        //System.out.println("Loading ROM.");
+		// Load Battery RAM (if present):
+		loadBatteryRam();
 
-        if (!rom.isValid()) {
-            //System.out.println("MMC1: Invalid ROM! Unable to load.");
-            return;
-        }
+		// Do Reset-Interrupt:
+		//nes.getCpu().doResetInterrupt();
+		nes.getCpu().requestIrq(CPU.IRQ_RESET);
 
-        // Load PRG-ROM:
-        loadRomBank(0, 0x8000);				//   First ROM bank..
-        loadRomBank(rom.getRomBankCount() - 1, 0xC000); 	// ..and last ROM bank.
+	}
 
-        // Load CHR-ROM:
-        loadCHRROM();
+	public void reset(){
 
-        // Load Battery RAM (if present):
-        loadBatteryRam();
+		regBuffer = 0;
+		regBufferCounter = 0;
 
-        // Do Reset-Interrupt:
-        //nes.getCpu().doResetInterrupt();
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+		// Register 0:
+		mirroring = 0;
+		oneScreenMirroring = 0;
+		prgSwitchingArea = 1;
+		prgSwitchingSize = 1;
+		vromSwitchingSize = 0;
 
-    }
+		// Register 1:
+		romSelectionReg0 = 0;
 
-    public void reset() {
+		// Register 2:
+		romSelectionReg1 = 0;
 
-        regBuffer = 0;
-        regBufferCounter = 0;
+		// Register 3:
+		romBankSelect = 0;
 
-        // Register 0:
-        mirroring = 0;
-        oneScreenMirroring = 0;
-        prgSwitchingArea = 1;
-        prgSwitchingSize = 1;
-        vromSwitchingSize = 0;
+	}
 
-        // Register 1:
-        romSelectionReg0 = 0;
+	private void switchLowHighPrgRom(int oldSetting){
 
-        // Register 2:
-        romSelectionReg1 = 0;
+		// not yet.
 
-        // Register 3:
-        romBankSelect = 0;
+	}
 
-    }
+	private void switch16to32(){
 
-    private void switchLowHighPrgRom(int oldSetting) {
+		// not yet.
 
-        // not yet.
-    }
+	}
 
-    private void switch16to32() {
+	private void switch32to16(){
 
-        // not yet.
-    }
+		// not yet.
 
-    private void switch32to16() {
+	}
 
-        // not yet.
-    }
 }

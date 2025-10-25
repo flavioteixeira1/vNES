@@ -1,20 +1,3 @@
-/*
-vNES
-Copyright © 2006-2013 Open Emulation Project
-
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with
-this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 public class Mapper032 extends MapperDefault {
 
     int regs[] = new int[1];
@@ -62,34 +45,34 @@ public class Mapper032 extends MapperDefault {
 
             switch (address & 0xF007) {
                 case 0xB000:
-                     {
-                        load1kVromBank(value, 0x0000);
-                    }
-                    break;
+                {
+                    load1kVromBank(value, 0x0000);
+                }
+                break;
 
                 case 0xB001:
-                     {
-                        load1kVromBank(value, 0x0400);
-                    }
-                    break;
+                {
+                    load1kVromBank(value, 0x0400);
+                }
+                break;
 
                 case 0xB002:
-                     {
-                        load1kVromBank(value, 0x0800);
-                    }
-                    break;
+                {
+                    load1kVromBank(value, 0x0800);
+                }
+                break;
 
                 case 0xB003:
-                     {
-                        load1kVromBank(value, 0x0C00);
-                    }
-                    break;
+                {
+                    load1kVromBank(value, 0x0C00);
+                }
+                break;
 
                 case 0xB004:
-                     {
-                        load1kVromBank(value, 0x1000);
-                    }
-                    break;
+                {
+                     load1kVromBank(value, 0x1000);
+                }
+                break;
 
                 case 0xB005:
                      {
@@ -116,6 +99,16 @@ public class Mapper032 extends MapperDefault {
                     break;
             }
         }
+    }
+
+    public void setCRC(long crc) {
+        patch = 0;
+
+        if (crc == 0x243A8735) {
+            // Major League Baseball
+            patch = 1;
+        }
+
     }
 
     public void loadROM(ROM rom) {
